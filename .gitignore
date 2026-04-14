@@ -1,0 +1,9 @@
+# Ignore sensitive data and local target lists
+results.txt
+targets.txt
+wordlist.txt
+
+# Ignore Python virtual environments and caches
+venv/
+__pycache__/
+*.pyc

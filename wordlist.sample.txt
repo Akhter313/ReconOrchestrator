@@ -1,0 +1,8 @@
+admin
+login
+api
+dashboard
+v1
+v2
+graphql
+staging

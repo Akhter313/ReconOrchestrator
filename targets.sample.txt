@@ -1,0 +1,3 @@
+https://example.com
+https://api.example.com
+https://testphp.vulnweb.com
