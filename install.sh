@@ -16,4 +16,9 @@ else
     echo "[+] ffuf detected!"
 fi
 
+echo "[*] Downloading default SecLists wordlist..."
+mkdir -p wordlists
+wget -q -O wordlists/default.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-small-directories.txt
+echo "[+] Wordlist downloaded successfully."
+
 echo "[+] Setup Complete. You are ready to run: python3 recon_orchestrator.py"

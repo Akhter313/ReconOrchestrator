@@ -1,4 +1,3 @@
-
 import concurrent.futures
 import subprocess
 import random
@@ -23,7 +22,7 @@ class UI:
 
 # --- Configuration & Hardware Limits ---
 MAX_WORKERS = 5
-WORDLIST = "wordlist.txt"
+WORDLIST = "wordlists/default.txt"
 RESULTS_FILE = "results.txt"
 
 # Dynamic User-Agent Cycling Pool
@@ -36,13 +35,13 @@ USER_AGENTS = [
 ]
 
 def print_banner(target_count, workers):
-    # Main title in Cyan (Slant style), Subtitle in Blue for contrast
-    banner = f"""{UI.CYAN}{UI.BOLD}
+    # Added the 'r' prefix to fix Python 3.12+ invalid escape sequence warnings
+    banner = rf"""{UI.CYAN}{UI.BOLD}
     ____                           ____           __               __             __            
-   / __ \\___  _________  ____     / __ \\_________/ /_  ___  ____  / /__________ _/ /_____  _____
-  / /_/ / _ \\/ ___/ __ \\/ __ \\   / / / / ___/ ___/ __ \\/ _ \\/ ___/ __/ ___/ __ `/ __/ __ \\/ ___/
+   / __ \___  _________  ____     / __ \_________/ /_  ___  ____  / /__________ _/ /_____  _____
+  / /_/ / _ \/ ___/ __ \/ __ \   / / / / ___/ ___/ __ \/ _ \/ ___/ __/ ___/ __ `/ __/ __ \/ ___/
  / _, _/  __/ /__/ /_/ / / / /  / /_/ / /  / /__/ / / /  __(__  ) /_/ /  / /_/ / /_/ /_/ / /    
-/_/ |_|\\___/\\___/\\____/_/ /_/   \\____/_/   \\___/_/ /_/\\___/____/\\__/_/   \\__,_/\\__/\\____/_/     
+/_/ |_|\___/\___/\____/_/ /_/   \____/_/   \___/_/ /_/\___/____/\__/_/   \__,_/\__/\____/_/     
 {UI.RESET}{UI.BLUE}
   > SYSTEM   : Target Acquisition & Concurrency Engine
   > PROTOCOL : Automated Web Reconnaissance / Rate-Limit Evasion
@@ -84,14 +83,16 @@ def scan_target(url, worker_id):
     current_ua = random.choice(USER_AGENTS)
     target_url = url if url.startswith("http") else f"https://{url}"
     
-    # 4. Constructing the ffuf Subprocess Command
+    # 4. Constructing the UPGRADED ffuf Command
     command = [
         "ffuf",
         "-u", f"{target_url}/FUZZ",
         "-w", WORDLIST,
-        "-t", "10",        # Internal thread limit
-        "-ac",             # Auto-calibrate to kill wildcard 301s/200s
-        "-s",              # Silent mode (only valid hits in stdout)
+        "-t", "30",            # UPGRADE: Tripled thread speed
+        "-timeout", "5",       # UPGRADE: 5-second max wait per request
+        "-maxtime", "120",     # UPGRADE: Strict 2-minute kill switch per subdomain
+        "-ac",                 # Auto-calibrate
+        "-s",                  # Silent mode
         "-H", f"User-Agent: {current_ua}"
     ]
 
@@ -102,28 +103,37 @@ def scan_target(url, worker_id):
     while attempts < max_retries:
         try:
             # Execute ffuf
-            result = subprocess.run(command, capture_output=True, text=True, timeout=600)
+            result = subprocess.run(command, capture_output=True, text=True, timeout=130)
             output = result.stdout + result.stderr
             
-            # 5. Adaptive Rate Control (Exponential Backoff)
+            # 5. Adaptive Rate Control
             if "429" in output or "403" in output:
                 print(f"[{UI.YELLOW}!{UI.RESET}] Worker {worker_id} | WAF Block (429/403) on {url}. Sleeping for {backoff_time}s...")
                 time.sleep(backoff_time)
-                backoff_time *= 2  # Double the backoff time for the next potential failure
+                backoff_time *= 2  
                 attempts += 1
-                continue  # Retry the same URL
+                continue  
             
-            # 6. Save Valid Results
+            # 6. The Anomaly Detector (Noise Filter)
             if output.strip():
-                with open(RESULTS_FILE, "a") as f:
-                    f.write(f"\n--- Results for {url} ---\n")
-                    f.write(output)
-                print(f"[{UI.GREEN}$$${UI.RESET}] Worker {worker_id} | Hits found on {url}! Saved to results.txt")
+                # Count how many hits ffuf actually found
+                hit_count = len([line for line in output.split('\n') if line.strip()])
+                
+                # If there are more than 25 hits, it is a Catch-All server lying to us.
+                if hit_count > 25:
+                    print(f"[{UI.YELLOW}!{UI.RESET}] Worker {worker_id} | Catch-All Detected on {url} ({hit_count} hits). Discarding noise.")
+                else:
+                    # It's a clean, valid result. Save it.
+                    with open(RESULTS_FILE, "a") as f:
+                        f.write(f"\n--- Results for {url} ---\n")
+                        f.write(output)
+                    # UPGRADE: Changed $$$ to a professional green +
+                    print(f"[{UI.GREEN}+{UI.RESET}] Worker {worker_id} | {hit_count} valid hits on {url}! Saved.")
             
-            break  # Success! Break the retry loop.
+            break  
 
         except subprocess.TimeoutExpired:
-            print(f"[{UI.RED}-{UI.RESET}] Worker {worker_id} | ffuf Timed Out on {url}.")
+            print(f"[{UI.RED}-{UI.RESET}] Worker {worker_id} | ffuf exceeded 2-minute MaxTime on {url}. Killed.")
             break
         except Exception as e:
             print(f"[{UI.RED}-{UI.RESET}] Worker {worker_id} | Subprocess Error on {url}: {e}")
@@ -135,7 +145,7 @@ def main():
         print(f"[{UI.RED}-{UI.RESET}] Error: 'targets.txt' not found in current directory.")
         return
     if not os.path.exists(WORDLIST):
-        print(f"[{UI.RED}-{UI.RESET}] Error: '{WORDLIST}' not found. Please provide a valid wordlist.")
+        print(f"[{UI.RED}-{UI.RESET}] Error: '{WORDLIST}' not found. Did you run ./install.sh first?")
         return
         
     with open("targets.txt", "r") as f:
@@ -162,4 +172,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
