@@ -1,20 +1,13 @@
-
-
-***
-
-
 # ReconOrchestrator
 **Controlled Concurrency Engine for Web Application Fuzzing**
 
-![Python](https://img.shields.io/badge/Python-3.x-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
 ![Security](https://img.shields.io/badge/Security-VAPT%20%7C%20Bug%20Bounty-red.svg)
 ![Environment](https://img.shields.io/badge/Environment-Linux%20%7C%20Kali-green.svg)
 
+<img width="1920" height="1038" alt="Untitled design(2)" src="https://github.com/user-attachments/assets/b58413ad-06ad-422f-9439-6d7fec1b1d07" />
 
-<img width="1916" height="572" alt="Untitled design" src="https://github.com/user-attachments/assets/b7bd020b-cfab-4494-978a-9edf28ee1552" />
-
-
-##  Overview
+## Overview
 **ReconOrchestrator** is a lightweight, Python-based concurrency wrapper engineered to automate multi-target web security assessments safely. 
 
 Modern cloud infrastructure utilizes aggressive Web Application Firewalls (WAFs) and rate-limiting algorithms that immediately block brute-force directory discovery tools. Furthermore, running high-speed multi-target scans can rapidly exhaust local system resources and cause local network port exhaustion.
@@ -23,41 +16,48 @@ This tool solves both problems. It acts as an intelligent governor for high-spee
 
 ---
 
-
 ##  Features
 
-  *  **Strict Concurrency** - Multi-threaded processing with hard-capped workers to prevent local hardware exhaustion.
-  *  **Adaptive Rate-Limiting** - Exponential backoff automatically triggers upon detecting `429` or `403` WAF mitigation responses.
-  *  **Smart Pre-Probing** - Lightweight liveness checks drop dead infrastructure before heavy fuzzing begins.
-  *  **Intelligent Noise Reduction** - Dynamic auto-calibration filters out generic wildcard `301` and `200` responses.
-  *  **Advanced IDS Evasion** - Implements execution jitter, target shuffling, and dynamic User-Agent cycling.
+  * **Intelligent Anomaly Detection** - Dynamically counts directory hits to identify and drop "Catch-All" (Soft 404) servers that trick standard auto-calibration, keeping your results perfectly clean.
+  * **Strict Concurrency & Kill Switches** - Multi-threaded processing with hard-capped workers and a strict 2-minute execution limit per subdomain to prevent tarpitting.
+  * **Adaptive Rate-Limiting** - Exponential backoff automatically triggers upon detecting `429` or `403` WAF mitigation responses.
+  * **Smart Pre-Probing** - Lightweight liveness checks drop dead infrastructure before heavy fuzzing begins.
 
 ##  Installation
 
-**From Source**
+ReconOrchestrator is designed for Kali Linux and Debian-based systems.
 
 ```bash
-git clone https://github.com/Akhter313/ReconOrchestrator.git
+git clone [https://github.com/Akhter313/ReconOrchestrator.git](https://github.com/Akhter313/ReconOrchestrator.git)
 cd ReconOrchestrator
 
-# Initialize virtual environment (Recommended)
-python3 -m venv venv
-source venv/bin/activate
+# Run the automated setup script (Installs dependencies & SecLists payload)
+bash install.sh
 
-# Install dependencies
-pip install requests urllib3
+# Activate the virtual environment
+source venv/bin/activate
 ```
 
-*Note: Ensure you have `ffuf` installed and accessible in your system's PATH.*
+*Note: Ensure you have `ffuf` installed (`sudo apt install ffuf`) and accessible in your system's PATH.*
 
 ##  Usage
 
 **Basic Usage**
 
 ```bash
-# Ensure targets.txt and wordlist.txt are populated, then run:
+# Ensure targets.txt is populated with URLs, then run:
 python3 recon_orchestrator.py
 ```
+
+##  How It Works
+
+1.  **Input Processing** - Reads targets and wordlists, shuffling the array to distribute load.
+2.  **Liveness Probing** - Pings the host with randomized User-Agents to verify uptime.
+3.  **Thread Assignment** - Spawns a worker under strict ThreadPool limits and enforces a 2-minute max-execution kill switch per target.
+4.  **Fuzzing Execution** - Invokes `ffuf` with auto-calibration and silent flags.
+5.  **Telemetry Analysis** - Intercepts the WAF response; pauses the thread and applies exponential backoff if rate-limited.
+6.  **Anomaly Detection** - Evaluates the final hit count. Instantly discards the dataset if it detects Catch-All (Soft 404) behavior.
+7.  **Output Generation** - Appends only valid, verified, and non-anomalous hits to `results.txt`.
 
 ##  Core Architecture
 
@@ -68,58 +68,38 @@ ReconOrchestrator bridges the gap between raw speed and connection stability:
 | **ThreadPoolExecutor** | Hard-caps concurrent background processes. | Prevents local router packet drops. |
 | **Requests Timeout** | 5-second lightweight pre-scan check. | Saves time on unresolvable DNS/dead IPs. |
 | **Subprocess Regex** | Monitors stdout for 429/403 blocks. | Evades Cloudflare/Akamai bot detection. |
-| **Auto-Calibration** | Analyzes baseline WAF responses. | Eliminates false-positive logs. |
+| **Anomaly Filtering** | Drops data if hits exceed logical thresholds. | Eliminates false-positive Catch-All noise. |
 
 ##  Bug Bounty Workflow
 
 ```bash
 # Step 1: Subdomain enumeration
-subfinder -d target.com -o subdomains.txt
+subfinder -d target.com -o targets.txt
 
-# Step 2: Resolve alive hosts (Optional, though ReconOrchestrator handles this)
-cat subdomains.txt | httpx -mc 200 -o targets.txt
-
-# Step 3: Run the Orchestrator
+# Step 2: Run the Orchestrator (It handles Liveness Checking automatically)
 python3 recon_orchestrator.py
 
-# Step 4: Pass valid findings directly to vulnerability scanners
+# Step 3: Pass valid findings directly to vulnerability scanners
 cat results.txt | nuclei -t vulnerabilities/
 ```
 
-
-
-##  Input File Formats
+##  Input Configurations
 
 **targets.txt**
-
+Populate this file with your live subdomains.
 ```text
-https://example.com
-https://api.example.com
-https://dev.example.com
+api.target.com
+staging.target.com
+uat-crm.target.com
+# ... all found subdomain of the target
 ```
 
-**wordlist.txt**
-
-```text
-admin
-login
-api
-dashboard
-v1
-```
-
-##  How It Works
-
-1.   **Input Processing** - Reads targets and wordlists, shuffling the array to distribute load.
-2.   **Liveness Probing** - Pings the host with randomized User-Agents to verify uptime.
-3.   **Thread Assignment** - Spawns a dedicated worker using the ThreadPool limits.
-4.   **Fuzzing Execution** - Invokes `ffuf` with auto-calibration and silent flags.
-5.   **Telemetry Analysis** - Intercepts the WAF response; pauses the thread if rate-limited.
-6.   **Output Generation** - Appends only 100% valid, verified hits to `results.txt`.
+**wordlists/default.txt**
+The `./install.sh` script automatically downloads the `raft-small-directories.txt` list from SecLists into this directory. You can swap this out for any custom `.txt` wordlist depending on your target.
 
 ##  Contributing
 
-Contributions are welcome\! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 1.  Fork the repository
 2.  Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -127,8 +107,8 @@ Contributions are welcome\! Please feel free to submit a Pull Request.
 4.  Push to the branch (`git push origin feature/AmazingFeature`)
 5.  Open a Pull Request
 
-
-
 ##  Disclaimer
 
 This tool is intended for security research and authorized testing only. Users are responsible for complying with applicable laws and regulations. Executing automated reconnaissance against systems you do not own or do not have explicit, written permission to test is illegal. The author assumes no liability for misuse.
+
+
