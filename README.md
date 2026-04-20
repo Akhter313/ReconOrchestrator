@@ -7,7 +7,6 @@
 
 <img width="1920" height="1043" alt="Untitled design(5)" src="https://github.com/user-attachments/assets/77fefe1a-db5c-45fc-ae45-682fa9a9475d" />
 
-
 ## Overview
 **ReconOrchestrator** is a lightweight, Python-based concurrency wrapper engineered to automate multi-target web security assessments safely. 
 
@@ -17,19 +16,19 @@ This tool solves both problems. It acts as an intelligent governor for high-spee
 
 ---
 
-##  Features
+## Features
 
-  * **Intelligent Anomaly Detection** - Dynamically counts directory hits to identify and drop "Catch-All" (Soft 404) servers that trick standard auto-calibration, keeping your results perfectly clean.
-  * **Strict Concurrency & Kill Switches** - Multi-threaded processing with hard-capped workers and a strict 2-minute execution limit per subdomain to prevent tarpitting.
-  * **Adaptive Rate-Limiting** - Exponential backoff automatically triggers upon detecting `429` or `403` WAF mitigation responses.
-  * **Smart Pre-Probing** - Lightweight liveness checks drop dead infrastructure before heavy fuzzing begins.
+* **Intelligent Anomaly Detection** - Dynamically counts directory hits to identify and drop "Catch-All" (Soft 404) servers that trick standard auto-calibration, keeping your results perfectly clean.
+* **Strict Concurrency & Kill Switches** - Multi-threaded processing with hard-capped workers and a strict 2-minute execution limit per subdomain to prevent tarpitting.
+* **Adaptive Rate-Limiting** - Exponential backoff automatically triggers upon detecting `429` or `403` WAF mitigation responses.
+* **Smart Pre-Probing** - Lightweight liveness checks drop dead infrastructure before heavy fuzzing begins.
 
-##  Installation
+## Installation
 
 ReconOrchestrator is designed for Kali Linux and Debian-based systems.
 
 ```bash
-git clone [https://github.com/Akhter313/ReconOrchestrator.git](https://github.com/Akhter313/ReconOrchestrator.git)
+git clone https://github.com/Akhter313/ReconOrchestrator.git
 cd ReconOrchestrator
 
 # Run the automated setup script (Installs dependencies & SecLists payload)
@@ -38,10 +37,7 @@ bash install.sh
 # Activate the virtual environment
 source venv/bin/activate
 ```
-
-*Note: Ensure you have `ffuf` installed (`sudo apt install ffuf`) and accessible in your system's PATH.*
-
-##  Usage
+## Usage
 
 **Basic Usage**
 
@@ -50,17 +46,17 @@ source venv/bin/activate
 python3 recon_orchestrator.py
 ```
 
-##  How It Works
+## How It Works
 
-1.  **Input Processing** - Reads targets and wordlists, shuffling the array to distribute load.
-2.  **Liveness Probing** - Pings the host with randomized User-Agents to verify uptime.
-3.  **Thread Assignment** - Spawns a worker under strict ThreadPool limits and enforces a 2-minute max-execution kill switch per target.
-4.  **Fuzzing Execution** - Invokes `ffuf` with auto-calibration and silent flags.
-5.  **Telemetry Analysis** - Intercepts the WAF response; pauses the thread and applies exponential backoff if rate-limited.
-6.  **Anomaly Detection** - Evaluates the final hit count. Instantly discards the dataset if it detects Catch-All (Soft 404) behavior.
-7.  **Output Generation** - Appends only valid, verified, and non-anomalous hits to `results.txt`.
+1. **Input Processing** - Reads targets and wordlists, shuffling the array to distribute load.
+2. **Liveness Probing** - Pings the host with randomized User-Agents to verify uptime.
+3. **Thread Assignment** - Spawns a worker under strict ThreadPool limits and enforces a 2-minute max-execution kill switch per target.
+4. **Fuzzing Execution** - Invokes `ffuf` with auto-calibration and silent flags.
+5. **Telemetry Analysis** - Intercepts the WAF response; pauses the thread and applies exponential backoff if rate-limited.
+6. **Anomaly Detection** - Evaluates the final hit count. Instantly discards the dataset if it detects Catch-All (Soft 404) behavior.
+7. **Output Generation** - Appends only valid, verified, and non-anomalous hits to `results.txt`.
 
-##  Core Architecture
+## Core Architecture
 
 ReconOrchestrator bridges the gap between raw speed and connection stability:
 
@@ -71,7 +67,7 @@ ReconOrchestrator bridges the gap between raw speed and connection stability:
 | **Subprocess Regex** | Monitors stdout for 429/403 blocks. | Evades Cloudflare/Akamai bot detection. |
 | **Anomaly Filtering** | Drops data if hits exceed logical thresholds. | Eliminates false-positive Catch-All noise. |
 
-##  Bug Bounty Workflow
+## Bug Bounty Workflow
 
 ```bash
 # Step 1: Subdomain enumeration
@@ -84,7 +80,7 @@ python3 recon_orchestrator.py
 cat results.txt | nuclei -t vulnerabilities/
 ```
 
-##  Input Configurations
+## Input Configurations
 
 **targets.txt**
 Populate this file with your live subdomains.
@@ -92,23 +88,23 @@ Populate this file with your live subdomains.
 api.target.com
 staging.target.com
 uat-crm.target.com
-# ... all found subdomain of the target
+# ... all found subdomains of the target
 ```
 
 **wordlists/default.txt**
 The `./install.sh` script automatically downloads the `raft-small-directories.txt` list from SecLists into this directory. You can swap this out for any custom `.txt` wordlist depending on your target.
 
-##  Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-1.  Fork the repository
-2.  Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-##  Disclaimer
+## Disclaimer
 
 This tool is intended for security research and authorized testing only. Users are responsible for complying with applicable laws and regulations. Executing automated reconnaissance against systems you do not own or do not have explicit, written permission to test is illegal. The author assumes no liability for misuse.
 
